@@ -1,26 +1,58 @@
-@import "tailwindcss";
+/* src/app/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette — matches dashboard exactly */
+  --bg-base:        #0B0B1A;
+  --bg-card:        #17172B;
+  --bg-card-hover:  #1E1E35;
+  --bg-input:       #12121F;
+
+  --accent:         #FF4F79;
+  --accent-hover:   #FF6B8F;
+  --accent-dim:     rgba(255, 79, 121, 0.12);
+  --accent-border:  rgba(255, 79, 121, 0.3);
+
+  --positive:       #4ADE80;
+  --positive-dim:   rgba(74, 222, 128, 0.1);
+  --negative:       #FF6B6B;
+  --negative-dim:   rgba(255, 107, 107, 0.1);
+
+  --text-primary:   #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --text-muted:     #52526E;
+
+  --border:         rgba(255, 255, 255, 0.07);
+  --border-hover:   rgba(255, 255, 255, 0.14);
+
+  --font-display:   'Syne', sans-serif;
+  --font-body:      'DM Sans', sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

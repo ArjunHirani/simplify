@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  upiId        String?
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  groupMemberships  GroupMember[]
+  expensesPaid      Expense[]        @relation("ExpensePaidBy")
+  expenseShares     ExpenseParticipant[]
+  settlementsPaid   Settlement[]     @relation("SettlementPayer")
+  settlementsReceived Settlement[]   @relation("SettlementReceiver")
+  friendRequestsSent     Friendship[] @relation("FriendshipSender")
+  friendRequestsReceived Friendship[] @relation("FriendshipReceiver")
+  notifications     Notification[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  emoji       String   @default("👥")
+  description String?
+  currency    String   @default("INR")
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members  GroupMember[]
+  expenses Expense[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String   @default("member") // "admin" | "member"
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  groupId     String?
+  paidById    String
+  title       String
+  amount      Float
+  category    String   @default("General")
+  splitType   String   @default("equal") // "equal" | "exact" | "percentage"
+  notes       String?
+  receiptUrl  String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  group        Group?               @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  paidBy       User                 @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  participants ExpenseParticipant[]
+
+  @@map("expenses")
+}
+
+model ExpenseParticipant {
+  id         String  @id @default(cuid())
+  expenseId  String
+  userId     String
+  owedAmount Float
+  paidAmount Float   @default(0)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+  @@map("expense_participants")
+}
+
+model Settlement {
+  id         String   @id @default(cuid())
+  payerId    String
+  receiverId String
+  amount     Float
+  method     String   @default("cash") // "cash" | "upi" | "card" | "bank"
+  note       String?
+  groupId    String?
+  createdAt  DateTime @default(now())
+
+  payer    User @relation("SettlementPayer",    fields: [payerId],    references: [id])
+  receiver User @relation("SettlementReceiver", fields: [receiverId], references: [id])
+
+  @@map("settlements")
+}
+
+model Friendship {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending") // "pending" | "accepted" | "rejected"
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("FriendshipSender",   fields: [senderId],   references: [id])
+  receiver User @relation("FriendshipReceiver", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@map("friendships")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String   // "expense" | "payment" | "friend_request" | "settlement"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
