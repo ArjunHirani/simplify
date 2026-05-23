@@ -1,10 +1,11 @@
+// app/api/auth/reset-password/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { token, newPassword } = body;
+    const { token, newPassword } = await req.json();
 
     if (!token || !newPassword) {
       return NextResponse.json(
@@ -20,9 +21,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // DEV: mock success — replace with real DB token check later
+    // ── Find token in DB ──
+    const resetRecord = await db.passwordResetToken.findUnique({
+      where: { token },
+    });
+
+    if (!resetRecord) {
+      return NextResponse.json(
+        { message: "Reset link is invalid or has already been used." },
+        { status: 400 }
+      );
+    }
+
+    // ── Check expiry ──
+    if (resetRecord.expiresAt < new Date()) {
+      await db.passwordResetToken.delete({ where: { token } });
+      return NextResponse.json(
+        { message: "Reset link has expired. Please request a new one." },
+        { status: 400 }
+      );
+    }
+
+    // ── Hash new password ──
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    console.log("[DEV] New password hash:", passwordHash);
+
+    // ── Update user password in DB ──
+    await db.user.update({
+      where: { id: resetRecord.userId },
+      data:  { passwordHash },
+    });
+
+    // ── Delete used token ──
+    await db.passwordResetToken.delete({ where: { token } });
 
     return NextResponse.json(
       { message: "Password reset successfully." },

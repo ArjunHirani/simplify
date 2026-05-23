@@ -17,14 +17,15 @@ function getUserId(req: NextRequest): string | null {
 // GET /api/groups/[id]
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const group = await db.group.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         members: {
           include: {
@@ -65,7 +66,7 @@ export async function GET(
 
     // ── Apply settlements ──
     const settlements = await db.settlement.findMany({
-      where: { groupId: params.id },
+      where: { groupId: id },
     });
     settlements.forEach((s) => {
       memberBalances[s.receiverId] = (memberBalances[s.receiverId] ?? 0) - s.amount;
@@ -126,25 +127,26 @@ export async function GET(
 // DELETE /api/groups/[id] — leave or delete group
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const member = await db.groupMember.findUnique({
-      where: { groupId_userId: { groupId: params.id, userId } },
+      where: { groupId_userId: { groupId: id, userId } },
     });
     if (!member) return NextResponse.json({ message: "Not a member." }, { status: 403 });
 
     if (member.role === "admin") {
       // Admin deletes the whole group
-      await db.group.delete({ where: { id: params.id } });
+      await db.group.delete({ where: { id: id } });
       return NextResponse.json({ message: "Group deleted." }, { status: 200 });
     } else {
       // Member just leaves
       await db.groupMember.delete({
-        where: { groupId_userId: { groupId: params.id, userId } },
+        where: { groupId_userId: { groupId: id, userId } },
       });
       return NextResponse.json({ message: "Left group." }, { status: 200 });
     }

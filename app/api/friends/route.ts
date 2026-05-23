@@ -68,10 +68,10 @@ export async function GET(req: NextRequest) {
         });
 
         const balance =
-          (theyOweMe._sum.owedAmount ?? 0) -
-          (iOweThem._sum.owedAmount ?? 0) +
-          (settledByFriend._sum.amount ?? 0) -
-          (settledByMe._sum.amount ?? 0);
+          (theyOweMe._sum.owedAmount ?? 0) -   // what friend owes you
+          (iOweThem._sum.owedAmount ?? 0) -    // what you owe friend
+          (settledByFriend._sum.amount ?? 0) - // friend paid you → they owe less
+          (settledByMe._sum.amount ?? 0);      // you paid friend → you owe less
 
         const initials = friend.fullName
           .split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);

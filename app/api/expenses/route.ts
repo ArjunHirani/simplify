@@ -14,32 +14,50 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null; }
 }
 
-// POST /api/expenses — add a new expense
+// POST /api/expenses
 export async function POST(req: NextRequest) {
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, amount, groupId, category, splitType, notes, date, splits } = await req.json();
+    const {
+      title,
+      amount,
+      groupId,
+      category,
+      splitType,
+      notes,
+      date,
+      splits,
+      selectedMemberIds, // ← which members to split with (from frontend)
+    } = await req.json();
 
     if (!title?.trim()) return NextResponse.json({ message: "Title is required." }, { status: 400 });
     if (!amount || amount <= 0) return NextResponse.json({ message: "Amount must be greater than 0." }, { status: 400 });
 
-    // ── Get group members for split ──
-    let participantIds: string[] = [userId];
+    // ── Determine participant IDs ──
+    let participantIds: string[] = [];
 
-    if (groupId) {
+    if (selectedMemberIds && selectedMemberIds.length > 0) {
+      // Use the member selection from the frontend
+      participantIds = selectedMemberIds;
+      // Always include the payer if not already included
+      if (!participantIds.includes(userId)) participantIds.push(userId);
+    } else if (groupId) {
+      // Fall back to all group members
       const members = await db.groupMember.findMany({ where: { groupId } });
-      participantIds = members.map((m) => m.userId);
+      participantIds = members.map((m: { userId: string }) => m.userId);
+    } else {
+      participantIds = [userId];
     }
 
     // ── Calculate split amounts ──
     const participants = calculateSplit({
       splitType: splitType || "equal",
-      amount:    parseFloat(amount),
+      amount: parseFloat(amount),
       participantIds,
-      paidById:  userId,
-      splits,    // custom splits from frontend
+      paidById: userId,
+      splits,
     });
 
     const expense = await db.expense.create({
@@ -52,9 +70,7 @@ export async function POST(req: NextRequest) {
         date:      date ? new Date(date) : new Date(),
         groupId:   groupId || null,
         paidById:  userId,
-        participants: {
-          create: participants,
-        },
+        participants: { create: participants },
       },
       include: {
         participants: {
@@ -64,6 +80,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // ── Create notifications for other participants ──
+    const otherParticipants = participants.filter(p => p.userId !== userId);
+    if (otherParticipants.length > 0) {
+      await db.notification.createMany({
+        data: otherParticipants.map(p => ({
+          userId:  p.userId,
+          title:   "New expense added",
+          body:    `${expense.paidBy.fullName} added "${title}" — you owe ₹${p.owedAmount.toFixed(0)}`,
+          type:    "expense",
+        })),
+      });
+    }
+
     return NextResponse.json({ expense }, { status: 201 });
   } catch (err) {
     console.error("POST /api/expenses error:", err);
@@ -71,7 +100,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/expenses — list expenses for current user
+// GET /api/expenses
 export async function GET(req: NextRequest) {
   const userId = getUserId(req);
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -89,11 +118,9 @@ export async function GET(req: NextRequest) {
         ...(groupId ? { groupId } : {}),
       },
       include: {
-        paidBy: { select: { id: true, fullName: true } },
-        participants: {
-          include: { user: { select: { id: true, fullName: true } } },
-        },
-        group: { select: { id: true, name: true, emoji: true } },
+        paidBy:       { select: { id: true, fullName: true } },
+        participants: { include: { user: { select: { id: true, fullName: true } } } },
+        group:        { select: { id: true, name: true, emoji: true } },
       },
       orderBy: { date: "desc" },
       take: 50,
@@ -106,13 +133,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── Split calculation helper ──
+// ── Split calculation ──
 function calculateSplit({
-  splitType,
-  amount,
-  participantIds,
-  paidById,
-  splits,
+  splitType, amount, participantIds, paidById, splits,
 }: {
   splitType: string;
   amount: number;
@@ -123,7 +146,6 @@ function calculateSplit({
   switch (splitType) {
     case "equal": {
       const share = parseFloat((amount / participantIds.length).toFixed(2));
-      // Adjust last person for rounding
       const last  = parseFloat((amount - share * (participantIds.length - 1)).toFixed(2));
       return participantIds.map((userId, i) => ({
         userId,
@@ -131,28 +153,22 @@ function calculateSplit({
         paidAmount: userId === paidById ? amount : 0,
       }));
     }
-
     case "exact": {
-      return participantIds.map((userId) => ({
+      return participantIds.map(userId => ({
         userId,
-        owedAmount: splits?.[userId] ?? 0,
+        owedAmount: parseFloat((splits?.[userId] ?? 0).toFixed(2)),
         paidAmount: userId === paidById ? amount : 0,
       }));
     }
-
     case "percentage": {
-      return participantIds.map((userId) => {
-        const pct = splits?.[userId] ?? 0;
-        return {
-          userId,
-          owedAmount: parseFloat(((amount * pct) / 100).toFixed(2)),
-          paidAmount: userId === paidById ? amount : 0,
-        };
-      });
+      return participantIds.map(userId => ({
+        userId,
+        owedAmount: parseFloat(((amount * (splits?.[userId] ?? 0)) / 100).toFixed(2)),
+        paidAmount: userId === paidById ? amount : 0,
+      }));
     }
-
     default:
-      return participantIds.map((userId) => ({
+      return participantIds.map(userId => ({
         userId,
         owedAmount: parseFloat((amount / participantIds.length).toFixed(2)),
         paidAmount: userId === paidById ? amount : 0,
