@@ -1,4 +1,5 @@
 // app/api/groups/[id]/route.ts
+export const dynamic = "force-dynamic"; 
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { db } from "@/lib/db";
