@@ -228,13 +228,35 @@ Serverless Postgres that scales to zero — zero cost when inactive, instant col
 
 ## 📸 Screenshots
 
-| Dashboard | Group Detail | Add Expense |
-|---|---|---|
-| Real-time balance summary | Per-member debt breakdown | Member selection + split types |
+---
 
-| Friends | Settle Up | Notifications |
-|---|---|---|
-| Balance tracking | UPI/Cash/Card payment | Real-time unread count |
+### 🏠 Dashboard — Real-time balance summary
+![Dashboard](https://simplify-eight-neon.vercel.app/screenshots/dashboard.png)
+
+---
+
+### 👥 Group Detail — Who owes whom
+![Group Detail](https://simplify-eight-neon.vercel.app/screenshots/group-detail.png)
+
+---
+
+### 💰 Add Expense — Member selection + split types
+![Add Expense](https://simplify-eight-neon.vercel.app/screenshots/add-expense.png)
+
+---
+
+### 🤝 Friends — Balance tracking
+![Friends](https://simplify-eight-neon.vercel.app/screenshots/friends.png)
+
+---
+
+### ✅ Settle Up — UPI / Cash / Card payment
+![Settle Up](https://simplify-eight-neon.vercel.app/screenshots/settle-up.png)
+
+---
+
+### 🔔 Notifications — Real-time unread count
+![Notifications](https://simplify-eight-neon.vercel.app/screenshots/notifications.png)
 
 ---
 
