@@ -1,12 +1,13 @@
 // src/app/(auth)/login/page.tsx
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { login, loginWithGoogle } = useAuth();
   const searchParams = useSearchParams();
 
@@ -295,5 +296,13 @@ function EyeIcon({ open }: { open: boolean }) {
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
       <circle cx="12" cy="12" r="3"/>
     </svg>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -1,13 +1,14 @@
 // src/app/(auth)/forgot-password/page.tsx
 "use client";
 
+import { Suspense } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 
 type State = "idle" | "loading" | "sent" | "error";
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordPageContent() {
   const { forgotPassword } = useAuth();
   const [email, setEmail]     = useState("");
   const [state, setState]     = useState<State>("idle");
@@ -236,5 +237,13 @@ export default function ForgotPasswordPage() {
         .full-width{ width:100%; }
       `}</style>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordPageContent />
+    </Suspense>
   );
 }
