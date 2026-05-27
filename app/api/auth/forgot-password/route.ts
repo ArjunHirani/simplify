@@ -1,11 +1,16 @@
 export const dynamic = "force-dynamic";
-// app/api/auth/forgot-password/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,8 +42,8 @@ export async function POST(req: NextRequest) {
 
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
 
-    await resend.emails.send({
-      from: "Simplify <onboarding@resend.dev>",
+    await transporter.sendMail({
+      from: `"Simplify 💸" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: "Reset your Simplify password",
       html: `
@@ -54,7 +59,6 @@ export async function POST(req: NextRequest) {
           </a>
           <p style="color:#888;font-size:12px;margin-top:32px">
             If you didn't request this, you can safely ignore this email.
-            Your password will not be changed.
           </p>
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
           <p style="color:#aaa;font-size:11px">Simplify · Split bills. Not friendships.</p>
